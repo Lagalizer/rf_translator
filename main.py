@@ -95,7 +95,8 @@ from PyQt6.QtWidgets import (
     QGridLayout
 )
 from PyQt6.QtCore import (Qt, QTimer, QPoint, QObject, pyqtSignal, QPropertyAnimation,
-                          QEasingCurve)
+                          QEasingCurve, QEvent)
+from PyQt6.QtWidgets import QToolTip
 from PyQt6.QtGui import QFont, QTextCursor, QAction, QColor, QCursor, QIcon
 
 # ---------- BOOTSTRAP ----------
@@ -1484,6 +1485,8 @@ class Overlay(QWidget):
 
         self.opacity_value = 1.0
         self._lines = []
+        self._my_lines = []         # as tuas falas (voz): separador '🎤'
+        self._me_until = {}         # fala ainda no chat → (entrada, até)
         self._capture_excluded = False
 
         state = load_overlay_state()
@@ -1609,8 +1612,18 @@ class Overlay(QWidget):
         self.text_edit = QTextEdit(self)
         self.text_edit.setReadOnly(True)
         self.text_edit.setFrameStyle(0)
-        self.text_edit.setAttribute(
-            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        # Selecionar texto com o rato; ao largar copia (como num terminal).
+        # As bordas continuam a redimensionar e o botão direito abre o
+        # menu do overlay (eventFilter).
+        self.text_edit.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.text_edit.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.NoContextMenu)
+        self.text_edit.viewport().setMouseTracking(True)
+        self.text_edit.viewport().installEventFilter(self)
+        self._selecting = False
+        self._rebuild_pending = False
+        self._fg_before = None          # janela à frente antes do clique
         root.addWidget(self.text_edit, 1)
 
         self._apply_style()
@@ -1799,6 +1812,10 @@ class Overlay(QWidget):
         if line.startswith("» "):
             return (f'<div style="{sep}color:#8f97a3; font-style:italic;">'
                     f'{self._escape_html(line)}</div>')
+        if line.startswith("   ↳ "):
+            # Tradução da tua fala, por baixo do que disseste.
+            return (f'<div style="{sep}color:#86efac; padding-left:14px;">'
+                    f'↳ {self._escape_html(line[5:])}</div>')
         m = re.match(r"^\[([^\]]+)\]\s*(.*)$", line)
         if m:
             speaker = m.group(1).strip()
@@ -1822,6 +1839,10 @@ class Overlay(QWidget):
                  .replace(">", "&gt;"))
 
     def _rebuild_html(self):
+        if self._selecting:
+            # A selecionar com o rato: uma mensagem nova apagava a seleção.
+            self._rebuild_pending = True
+            return
         html = "".join(self._line_to_html(l) for l in self._visible_lines())
         body = html or ('<div style="color:#888; font-style:italic;">'
                         + self._escape_html(T("(waiting for translations...)"))
@@ -2060,10 +2081,13 @@ class Overlay(QWidget):
         g = self.frameGeometry()
         inside = g.contains(pos)
         over_header = inside and pos.y() < g.y() + self.HEADER_HEIGHT
-        # Bloqueado (ou chat escondido): o corpo deixa passar os cliques
-        # para o jogo; a barra de cima continua sempre clicável.
-        self._set_click_through((self._locked or self._body_hidden)
-                                and not over_header)
+        # Bloqueado (se a opção estiver ligada) ou chat escondido: o corpo
+        # deixa passar os cliques para o jogo; a barra de cima continua
+        # sempre clicável. Bloqueado sem a opção: dá para copiar texto.
+        locked_ct = self._locked and bool(
+            self._style.get("locked_click_through", True))
+        self._set_click_through((locked_ct or self._body_hidden)
+                                and not over_header and not self._selecting)
         # Esconder sozinho se ninguém falar há X s.
         st = self._style
         if self._view_mode() == "bar":
@@ -2140,6 +2164,84 @@ class Overlay(QWidget):
         if edges & (E.LeftEdge | E.RightEdge): return Qt.CursorShape.SizeHorCursor
         if edges & (E.TopEdge | E.BottomEdge): return Qt.CursorShape.SizeVerCursor
         return None
+
+    # ---------- selecionar e copiar texto do chat ----------
+    def eventFilter(self, obj, event):
+        """Rato no texto do chat. Desbloqueado: bordas redimensionam e, no
+        modo 'só o chat', o topo arrasta (como antes). Resto: seleciona;
+        ao largar o botão esquerdo copia (como num terminal) e devolve o
+        foco ao jogo."""
+        if obj is not self.text_edit.viewport():
+            return super().eventFilter(obj, event)
+        et = event.type()
+        if et in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseMove,
+                  QEvent.Type.MouseButtonRelease):
+            pos = self.mapFromGlobal(event.globalPosition().toPoint())
+            edges = Qt.Edge(0) if self._locked else self._edges_at(pos)
+            top_drag = (not self._locked and self._view_mode() == "chat"
+                        and pos.y() <= self.HEADER_HEIGHT + 4)
+            if et == QEvent.Type.MouseMove and not event.buttons():
+                shape = self._cursor_for(edges) if edges else None
+                if shape is None and top_drag:
+                    shape = Qt.CursorShape.OpenHandCursor
+                self.text_edit.viewport().setCursor(
+                    shape or Qt.CursorShape.IBeamCursor)
+                return False
+            if et == QEvent.Type.MouseButtonPress:
+                self._last_hover = time.time()
+                self._fade_header(True)
+                if event.button() == Qt.MouseButton.RightButton:
+                    return False        # vai para o menu do overlay
+                if event.button() == Qt.MouseButton.LeftButton:
+                    wh = self.windowHandle()
+                    if edges and wh is not None:
+                        wh.startSystemResize(edges)
+                        return True
+                    if top_drag and wh is not None:
+                        wh.startSystemMove()
+                        return True
+                    self._selecting = True
+                    self._fg_before = self._foreground_hwnd()
+                return False
+            if et == QEvent.Type.MouseButtonRelease \
+                    and event.button() == Qt.MouseButton.LeftButton \
+                    and self._selecting:
+                # Deixa o QTextEdit acabar a seleção e depois copia.
+                QTimer.singleShot(0, self._copy_selection)
+                return False
+        return super().eventFilter(obj, event)
+
+    @staticmethod
+    def _foreground_hwnd():
+        try:
+            return ctypes.windll.user32.GetForegroundWindow() \
+                if os.name == "nt" else None
+        except Exception:
+            return None
+
+    def _copy_selection(self):
+        self._selecting = False
+        cur = self.text_edit.textCursor()
+        text = cur.selection().toPlainText().strip() \
+            if cur.hasSelection() else ""
+        if text:
+            QApplication.clipboard().setText(text)
+            QToolTip.showText(QCursor.pos(), T("📋 Copied"), self, self.rect(),
+                              1500)
+            log().info(f"Overlay: copiado ({len(text)} caracteres)")
+        # O clique deu o foco ao overlay: devolve-o ao jogo (ou à janela
+        # que estava à frente) para o teclado continuar a ir para lá.
+        fg = self._fg_before
+        self._fg_before = None
+        if fg and os.name == "nt":
+            try:
+                if fg != int(self.winId()):
+                    ctypes.windll.user32.SetForegroundWindow(fg)
+            except Exception:
+                pass
+        if self._rebuild_pending:
+            self._rebuild_pending = False
+            self._rebuild_html()
 
     def mousePressEvent(self, event):
         self._last_hover = time.time()
@@ -2227,6 +2329,22 @@ class Overlay(QWidget):
         a_perf.setCheckable(True)
         a_perf.setChecked(bool(self._show_perf))
         self._a_perf = a_perf
+        m_speech = menu.addMenu("🎤  " + T("Your speech in the chat"))
+        self._a_speech = {}
+        cur_s = int(st.get("my_speech_secs", 20) or 0)
+        for n in (0, 10, 20, 30, 60):
+            a = m_speech.addAction(T("Only in the 🎤 tab") if n == 0
+                                   else T("{n} s", n=n) if n < 60
+                                   else T("{n} min", n=n // 60))
+            a.setCheckable(True)
+            a.setChecked(cur_s == n)
+            self._a_speech[a] = n
+        a_ct = menu.addAction("🖱  " + T("Locked: clicks go to the game"))
+        a_ct.setCheckable(True)
+        a_ct.setChecked(bool(st.get("locked_click_through", True)))
+        a_ct.setToolTip(T("Off: with the lock on you can select text in the "
+                          "chat; releasing the mouse copies it."))
+        self._a_lockct = a_ct
         menu.addSeparator()
         a_back = None       # era 'Voltar às configurações' (repetido)
         a_cfg = menu.addAction(tr("ov_config"))
@@ -2257,6 +2375,21 @@ class Overlay(QWidget):
         if chosen is None: return
         if chosen is getattr(self, "_a_perf", None):
             self._toggle_perf(chosen.isChecked())
+            return
+        if chosen in getattr(self, "_a_speech", {}):
+            n = self._a_speech[chosen]
+            self._set_style_key("my_speech_secs", n)
+            self.append_system(
+                T("🎤 Your speech stays {n} s in the chat, then only in the "
+                  "🎤 tab", n=n) if n else
+                T("🎤 Your speech goes only to the 🎤 tab"))
+            return
+        if chosen is getattr(self, "_a_lockct", None):
+            on = chosen.isChecked()
+            self._set_style_key("locked_click_through", on)
+            self.append_system(
+                T("🖱 Locked: clicks go to the game") if on else
+                T("🖱 Locked: you can select and copy the chat text"))
             return
         if chosen in getattr(self, "_a_views", {}):
             self._set_view_mode(self._a_views[chosen])
@@ -2303,11 +2436,39 @@ class Overlay(QWidget):
         self._handle_menu_choice(chosen, refs)
 
     # Sem 'system': esse chat é ignorado (ao abri-lo no jogo o overlay
-    # fica onde estava).
+    # fica onde estava). 'me' = as tuas falas (voz), separador só da app.
     TAB_LABELS = {"all": "All", "world": "World", "server": "Server",
                   "party": "Party", "guild": "Guild", "raid": "Raid",
-                  "whisper": "PM", "channel": "Chan"}
+                  "whisper": "PM", "channel": "Chan", "me": "🎤"}
     MAX_STORED = 400
+    MAX_MY_SPEECH = 300
+
+    def add_my_speech(self, said, sent):
+        """Frase da voz enviada para o jogo: fica no chat aberto durante
+        'my_speech_secs' e guardada no separador '🎤' (as tuas falas)."""
+        # Duas linhas: o que disseste e, por baixo, a tradução enviada.
+        said, sent = said.strip(), sent.strip()
+        lines = [f"[{T('Me')}] {said or sent}"]
+        if said and sent and said != sent:
+            lines.append(f"   ↳ {sent}")
+        self._my_lines.extend(lines)
+        del self._my_lines[:-self.MAX_MY_SPEECH]
+        secs = int(self._style.get("my_speech_secs", 20) or 0)
+        if secs > 0:
+            t_end = time.time() + secs
+            for line in lines:
+                entry = ("me_tmp", line)
+                self._lines.append(entry)
+                self._me_until[id(entry)] = (entry, t_end)
+            QTimer.singleShot(secs * 1000 + 200, self._rebuild_html)
+        self._ensure_tab("me")
+        if self._view != "me":
+            self._unread["me"] = self._unread.get("me", 0) + 1
+        self._refresh_tabs()
+        self._last_activity = time.time()
+        if self._view_mode() != "bar":
+            self._show_body(True)
+        self._rebuild_html()
 
     def append_text(self, channel, text=None):
         """(canal, texto) vindo do OCRWorker; (texto) = mensagem da app.
@@ -2358,7 +2519,7 @@ class Overlay(QWidget):
         for ch, b in self._tab_btns.items():
             active = ch == self._view
             n = self._unread.get(ch, 0)
-            label = self.TAB_LABELS[ch]
+            label = "🎤 " + T("Me") if ch == "me" else self.TAB_LABELS[ch]
             if ch == "whisper" and active and self._view_partner:
                 label = f"PM·{self._view_partner[:10]}"
             b.setText(f"{label} {n}" if n and not active else label)
@@ -2388,10 +2549,24 @@ class Overlay(QWidget):
 
     def _visible_lines(self):
         """Linhas do canal/conversa mostrados (mensagens da app em todos)."""
+        if self._view == "me":
+            return self._my_lines[-MAX_OVERLAY_LINES:]
         out = []
         want = core._speaker_key(self._view_partner) \
             if self._view_partner else None
-        for ch, line in self._lines:
+        now = time.time()
+        until = self._me_until
+        expired = [k for k, (_, t_end) in until.items() if now >= t_end]
+        if expired:
+            # A tua fala já cumpriu o tempo no chat: fica só no '🎤'.
+            gone = {id(until.pop(k)[0]) for k in expired}
+            self._lines = [e for e in self._lines if id(e) not in gone]
+        for entry in self._lines:
+            ch, line = entry
+            if ch == "me_tmp":
+                if id(entry) in until:      # em qualquer separador
+                    out.append(line)
+                continue
             if ch is None or self._view == "all":
                 out.append(line)
             elif ch == self._view:
@@ -5549,6 +5724,7 @@ class RFTranslatorApp:
                              continuous_stop=cont)
         worker.status.connect(self.overlay.append_system)
         worker.voice_state.connect(self.overlay.set_voice_state)
+        worker.spoken.connect(self.overlay.add_my_speech)
         self._voice_worker_ref = worker
         worker.trigger()
 

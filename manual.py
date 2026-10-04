@@ -186,6 +186,12 @@ applying a 💾 profile keeps the AI you have.</li>
 <li><b>Game in sleep mode</b> (“Swipe to exit sleep mode”): the chat is still read. To type your voice message the app wakes the game (L key) and puts it back to sleep afterwards.</li>
 <li><b>AI speed in the top bar</b>: ⚡ time of each AI request, ⏱ delay from reading the chat to showing the translation, ⏳ messages waiting, 👁 time of each chat read. Green = good, yellow = slow, red = too slow; ⚠ = the AI is failing. It can be turned off in the ⚙ menu (📊).</li>
 <li>⚙ menu → <b>🪟 Show</b>: bar and chat, only the top bar (the chat hides and clicks go to the game) or only the chat (no bar; right-click for the menu). In <b>⚙ App settings → overlay appearance</b>: <b>chat font</b>, font size and <b>top bar size</b> (everything in the bar grows together).</li>
+<li><b>🎤 Your speech</b>: what you said by voice shows in the chat with
+the translation below it, for the time chosen in ⚙ menu → <b>🎤 Your speech in
+the chat</b> (20 s by default), and then stays in the <b>🎤 Me</b> tab.</li>
+<li><b>📋 Copy from the chat</b>: hold the left mouse button over the text,
+drag, and release: it is copied. Works with the overlay unlocked, or locked if
+⚙ menu → <b>🖱 Locked: clicks go to the game</b> is off.</li>
 <li><b>📊 Ratings</b> (tab at the top of this window, or the ⚙ menu): the AIs tested with this app, with speed and quality, and <b>🧪 Test on this PC</b>: choose an AI (with the options it has now: GPU layers, context…) and press <b>▶ Test</b>. It shows the speed, the problems and whether it runs well on your PC; for a local AI it can also compare graphics card and processor.</li>
 <li><b>Continuous mode with headphones</b>: with <b>🎧 Keep reading the chat in continuous mode</b> on, the chat voice keeps reading between your sentences and goes quiet while you speak. With speakers, turn it off so the mic never hears the voice. In every mode, a chat message cut off because you started talking is read again afterwards.</li>
 <li><b>Local models</b>: only the model in use stays in the graphics memory; the previous one leaves when you change model or switch to a cloud AI. The voice can use another local model than the chat (then both stay loaded). Everything is unloaded when the app closes, even after a crash.</li>
@@ -400,6 +406,13 @@ perfis, por isso aplicar um perfil 💾 mantém a IA que tens.</li>
 <li><b>Jogo no modo de poupança</b> (“Swipe to exit sleep mode”): o chat continua a ser lido. Para escrever a tua mensagem de voz a app acorda o jogo (tecla L) e volta a pô-lo a dormir no fim.</li>
 <li><b>Velocidade da IA na barra de cima</b>: ⚡ tempo de cada pedido à IA, ⏱ atraso desde que o chat é lido até a tradução aparecer, ⏳ mensagens à espera, 👁 tempo de cada leitura do chat. Verde = bom, amarelo = lento, vermelho = lento demais; ⚠ = a IA está a falhar. Desliga-se no menu ⚙ (📊).</li>
 <li>Menu ⚙ → <b>🪟 Mostrar</b>: barra e chat, só a barra de cima (o chat esconde-se e os cliques vão para o jogo) ou só o chat (sem barra; botão direito para o menu). Em <b>⚙ Configurações da app → aparência do overlay</b>: <b>letra do chat</b>, tamanho da letra e <b>tamanho da barra de cima</b> (tudo na barra cresce junto).</li>
+<li><b>🎤 As tuas falas</b>: o que disseste pela voz aparece no chat com
+a tradução por baixo, durante o tempo escolhido em menu ⚙ → <b>🎤 As tuas falas
+no chat</b> (20 s por omissão), e depois fica no separador <b>🎤 Eu</b>.</li>
+<li><b>📋 Copiar do chat</b>: carrega no botão esquerdo por cima do texto,
+arrasta e larga: fica copiado. Funciona com o overlay desbloqueado, ou
+bloqueado se o menu ⚙ → <b>🖱 Com o cadeado: os cliques vão para o jogo</b>
+estiver desligado.</li>
 <li><b>📊 Ratings</b> (separador no topo desta janela, ou menu ⚙): as IAs testadas com esta app, com velocidade e qualidade, e <b>🧪 Testar neste PC</b>: escolhe uma IA (com as opções que tem agora: camadas na GPU, contexto…) e carrega em <b>▶ Testar</b>. Mostra a velocidade, os problemas e se corre bem no teu PC; numa IA local também compara placa gráfica e processador.</li>
 <li><b>Modo contínuo com auscultadores</b>: com <b>🎧 Continuar a ler o chat no modo contínuo</b> ligado, a voz do chat continua a ler entre as tuas frases e cala-se enquanto falas. Com colunas, desliga-o para o micro nunca ouvir a voz. Em todos os modos, uma mensagem do chat cortada por começares a falar é lida outra vez a seguir.</li>
 <li><b>Modelos locais</b>: só o modelo em uso fica na memória da placa gráfica; o anterior sai quando mudas de modelo ou passas para uma IA na nuvem. A voz pode usar outro modelo local diferente do do chat (aí ficam os dois carregados). Tudo é descarregado quando a app fecha, mesmo se rebentar.</li>
@@ -618,6 +631,12 @@ tiene sus propios perfiles, así que aplicar un perfil 💾 mantiene tu IA.</li>
 <li><b>Juego en modo ahorro</b> («Swipe to exit sleep mode»): el chat se sigue leyendo. Para escribir tu mensaje de voz la app despierta el juego (tecla L) y lo vuelve a dormir al final.</li>
 <li><b>Velocidad de la IA en la barra superior</b>: ⚡ tiempo de cada petición a la IA, ⏱ retraso desde que se lee el chat hasta que aparece la traducción, ⏳ mensajes esperando, 👁 tiempo de cada lectura del chat. Verde = bien, amarillo = lento, rojo = demasiado lento; ⚠ = la IA está fallando. Se desactiva en el menú ⚙ (📊).</li>
 <li>Menú ⚙ → <b>🪟 Mostrar</b>: barra y chat, solo la barra superior (el chat se oculta y los clics van al juego) o solo el chat (sin barra; clic derecho para el menú). En <b>⚙ Ajustes de la app → apariencia del overlay</b>: <b>fuente del chat</b>, tamaño de letra y <b>tamaño de la barra superior</b> (todo en la barra crece junto).</li>
+<li><b>🎤 Lo que dices</b>: lo que dijiste por voz aparece en el chat con
+la traducción debajo, durante el tiempo elegido en menú ⚙ → <b>🎤 Lo que dices
+en el chat</b> (20 s por defecto), y luego queda en la pestaña <b>🎤 Yo</b>.</li>
+<li><b>📋 Copiar del chat</b>: mantén el botón izquierdo sobre el texto,
+arrastra y suelta: se copia. Funciona con el overlay desbloqueado, o bloqueado
+si el menú ⚙ → <b>🖱 Bloqueado: los clics van al juego</b> está desactivado.</li>
 <li><b>📊 Ratings</b> (pestaña arriba en esta ventana, o menú ⚙): las IA probadas con esta app, con velocidad y calidad, y <b>🧪 Probar en este PC</b>: elige una IA (con las opciones que tiene ahora: capas en la GPU, contexto…) y pulsa <b>▶ Probar</b>. Muestra la velocidad, los problemas y si funciona bien en tu PC; con una IA local también compara tarjeta gráfica y procesador.</li>
 <li><b>Modo continuo con auriculares</b>: con <b>🎧 Seguir leyendo el chat en modo continuo</b> activado, la voz del chat sigue leyendo entre tus frases y se calla mientras hablas. Con altavoces, desactívalo para que el micro nunca oiga la voz. En todos los modos, un mensaje del chat cortado porque empezaste a hablar se vuelve a leer después.</li>
 <li><b>Modelos locales</b>: solo el modelo en uso se queda en la memoria de la tarjeta gráfica; el anterior sale cuando cambias de modelo o pasas a una IA en la nube. La voz puede usar otro modelo local distinto del del chat (entonces se quedan los dos cargados). Todo se descarga al cerrar la app, incluso si falla.</li>
@@ -843,6 +862,14 @@ IA.</li>
 <li><b>Jeu en mode veille</b> (« Swipe to exit sleep mode ») : le chat est toujours lu. Pour écrire ton message vocal, l'app réveille le jeu (touche L) et le remet en veille ensuite.</li>
 <li><b>Vitesse de l'IA dans la barre du haut</b> : ⚡ temps de chaque requête à l'IA, ⏱ délai entre la lecture du chat et l'affichage de la traduction, ⏳ messages en attente, 👁 temps de chaque lecture du chat. Vert = bien, jaune = lent, rouge = trop lent ; ⚠ = l'IA échoue. Se désactive dans le menu ⚙ (📊).</li>
 <li>Menu ⚙ → <b>🪟 Afficher</b> : barre et chat, seulement la barre du haut (le chat se cache et les clics vont au jeu) ou seulement le chat (sans barre ; clic droit pour le menu). Dans <b>⚙ Réglages de l'app → apparence de l'overlay</b> : <b>police du chat</b>, taille du texte et <b>taille de la barre du haut</b> (tout dans la barre grandit ensemble).</li>
+<li><b>🎤 Tes paroles</b> : ce que tu as dit à la voix s'affiche dans le
+chat avec la traduction en dessous, pendant le temps choisi dans le menu ⚙ →
+<b>🎤 Tes paroles dans le chat</b> (20 s par défaut), puis reste dans l'onglet
+<b>🎤 Moi</b>.</li>
+<li><b>📋 Copier depuis le chat</b> : maintiens le bouton gauche sur le texte,
+fais glisser et relâche : c'est copié. Marche avec l'overlay déverrouillé, ou
+verrouillé si le menu ⚙ → <b>🖱 Verrouillé : les clics vont au jeu</b> est
+désactivé.</li>
 <li><b>📊 Ratings</b> (onglet en haut de cette fenêtre, ou menu ⚙) : les IA testées avec cette app, avec vitesse et qualité, et <b>🧪 Tester sur ce PC</b> : choisis une IA (avec ses options actuelles : couches GPU, contexte…) et appuie sur <b>▶ Tester</b>. Elle montre la vitesse, les problèmes et si elle fonctionne bien sur ton PC ; pour une IA locale elle compare aussi carte graphique et processeur.</li>
 <li><b>Mode continu avec un casque</b> : avec <b>🎧 Continuer à lire le chat en mode continu</b> activé, la voix du chat continue de lire entre tes phrases et se tait quand tu parles. Avec des haut-parleurs, désactive-le pour que le micro n'entende jamais la voix. Dans tous les modes, un message du chat coupé parce que tu as commencé à parler est relu ensuite.</li>
 <li><b>Modèles locaux</b> : seul le modèle utilisé reste dans la mémoire de la carte graphique ; le précédent sort quand tu changes de modèle ou passes à une IA cloud. La voix peut utiliser un autre modèle local que le chat (les deux restent alors chargés). Tout est déchargé à la fermeture de l'app, même après un plantage.</li>
@@ -1065,6 +1092,12 @@ Audiogeräte. Die KI speichert es nie: Jedes KI-Feld hat eigene Profile, ein
 <li><b>Spiel im Energiesparmodus</b> („Swipe to exit sleep mode“): Der Chat wird weiter gelesen. Um deine Sprachnachricht zu schreiben, weckt die App das Spiel (Taste L) und schickt es danach wieder schlafen.</li>
 <li><b>KI-Tempo in der oberen Leiste</b>: ⚡ Dauer jeder KI-Anfrage, ⏱ Verzögerung vom Lesen des Chats bis zur Übersetzung, ⏳ wartende Nachrichten, 👁 Dauer jedes Chat-Lesens. Grün = gut, gelb = langsam, rot = zu langsam; ⚠ = die KI schlägt fehl. Lässt sich im ⚙-Menü (📊) ausschalten.</li>
 <li>⚙-Menü → <b>🪟 Anzeigen</b>: Leiste und Chat, nur die obere Leiste (der Chat wird ausgeblendet, Klicks gehen ans Spiel) oder nur den Chat (ohne Leiste; Rechtsklick für das Menü). In <b>⚙ App-Einstellungen → Overlay-Aussehen</b>: <b>Chat-Schrift</b>, Schriftgröße und <b>Größe der oberen Leiste</b> (alles in der Leiste wächst zusammen).</li>
+<li><b>🎤 Deine Sprache</b>: Was du per Stimme gesagt hast, erscheint im
+Chat mit der Übersetzung darunter, so lange wie im ⚙-Menü → <b>🎤 Deine Sprache
+im Chat</b> gewählt (Standard 20 s), danach bleibt es im Tab <b>🎤 Ich</b>.</li>
+<li><b>📋 Aus dem Chat kopieren</b>: linke Maustaste über dem Text halten,
+ziehen und loslassen: es ist kopiert. Geht mit entsperrtem Overlay, oder
+gesperrt, wenn im ⚙-Menü <b>🖱 Gesperrt: Klicks gehen ans Spiel</b> aus ist.</li>
 <li><b>📊 Ratings</b> (Tab oben in diesem Fenster oder ⚙-Menü): die mit dieser App getesteten KIs mit Tempo und Qualität, und <b>🧪 Auf diesem PC testen</b>: Wähle eine KI (mit ihren aktuellen Optionen: GPU-Schichten, Kontext…) und drücke <b>▶ Testen</b>. Es zeigt das Tempo, die Probleme und ob sie auf deinem PC gut läuft; bei lokaler KI vergleicht es auch Grafikkarte und Prozessor.</li>
 <li><b>Dauermodus mit Kopfhörern</b>: Mit <b>🎧 Chat im Dauermodus weiter vorlesen</b> liest die Chat-Stimme zwischen deinen Sätzen weiter und schweigt, während du sprichst. Mit Lautsprechern schalte es aus, damit das Mikro die Stimme nie hört. In allen Modi wird eine Chat-Nachricht, die unterbrochen wurde, weil du zu sprechen begannst, danach erneut gelesen.</li>
 <li><b>Lokale Modelle</b>: Nur das benutzte Modell bleibt im Grafikspeicher; das vorherige wird entladen, wenn du das Modell wechselst oder zu einer Cloud-KI gehst. Die Stimme kann ein anderes lokales Modell als der Chat nutzen (dann bleiben beide geladen). Alles wird entladen, wenn die App schließt, auch nach einem Absturz.</li>
@@ -1283,6 +1316,13 @@ Alt+Tab оверлей прячется, но чтение и озвучка п�
 <li><b>Игра в режиме сна</b> («Swipe to exit sleep mode»): чат всё равно читается. Чтобы напечатать голосовое сообщение, приложение будит игру (клавиша L) и потом снова усыпляет её.</li>
 <li><b>Скорость ИИ на верхней панели</b>: ⚡ время каждого запроса к ИИ, ⏱ задержка от чтения чата до появления перевода, ⏳ сообщения в очереди, 👁 время каждого чтения чата. Зелёный = хорошо, жёлтый = медленно, красный = слишком медленно; ⚠ = ИИ даёт сбои. Отключается в меню ⚙ (📊).</li>
 <li>Меню ⚙ → <b>🪟 Показывать</b>: панель и чат, только верхняя панель (чат скрыт, клики идут в игру) или только чат (без панели; меню по правой кнопке). В <b>⚙ Настройки приложения → вид оверлея</b>: <b>шрифт чата</b>, размер шрифта и <b>размер верхней панели</b> (всё на панели растёт вместе).</li>
+<li><b>🎤 Ваши фразы</b>: сказанное голосом появляется в чате с
+переводом ниже на время, выбранное в меню ⚙ → <b>🎤 Ваши фразы в чате</b>
+(по умолчанию 20 с), а потом остаётся во вкладке <b>🎤 Я</b>.</li>
+<li><b>📋 Копировать из чата</b>: зажмите левую кнопку мыши над текстом,
+протяните и отпустите — текст скопирован. Работает при разблокированном
+оверлее или при блокировке, если в меню ⚙ выключено <b>🖱 Заблокировано: клики
+идут в игру</b>.</li>
 <li><b>📊 Ratings</b> (вкладка вверху этого окна или меню ⚙): ИИ, проверенные с этим приложением, со скоростью и качеством, и <b>🧪 Проверить на этом ПК</b>: выберите ИИ (с его текущими опциями: слои на GPU, контекст…) и нажмите <b>▶ Проверить</b>. Показывает скорость, проблемы и хорошо ли он работает на вашем ПК; для локального ИИ также сравнивает видеокарту и процессор.</li>
 <li><b>Непрерывный режим в наушниках</b>: с включённым <b>🎧 Продолжать читать чат в непрерывном режиме</b> голос чата читает между вашими фразами и замолкает, пока вы говорите. С колонками выключите, чтобы микрофон не слышал голос. Во всех режимах сообщение чата, прерванное тем, что вы начали говорить, потом читается заново.</li>
 <li><b>Локальные модели</b>: в видеопамяти остаётся только используемая модель; предыдущая выгружается, когда вы меняете модель или переходите на облачный ИИ. Голос может использовать другую локальную модель, чем чат (тогда загружены обе). Всё выгружается при закрытии приложения, даже после сбоя.</li>
@@ -1501,6 +1541,13 @@ suoi profili, quindi applicare un profilo 💾 mantiene la tua IA.</li>
 <li><b>Gioco in modalità risparmio</b> («Swipe to exit sleep mode»): la chat viene comunque letta. Per scrivere il tuo messaggio vocale l'app sveglia il gioco (tasto L) e poi lo rimette in risparmio.</li>
 <li><b>Velocità dell'IA nella barra in alto</b>: ⚡ tempo di ogni richiesta all'IA, ⏱ ritardo dalla lettura della chat alla comparsa della traduzione, ⏳ messaggi in attesa, 👁 tempo di ogni lettura della chat. Verde = bene, giallo = lento, rosso = troppo lento; ⚠ = l'IA sta fallendo. Si disattiva nel menu ⚙ (📊).</li>
 <li>Menu ⚙ → <b>🪟 Mostra</b>: barra e chat, solo la barra in alto (la chat si nasconde e i clic vanno al gioco) o solo la chat (senza barra; clic destro per il menu). In <b>⚙ Impostazioni dell'app → aspetto dell'overlay</b>: <b>carattere della chat</b>, dimensione del testo e <b>dimensione della barra in alto</b> (tutto nella barra cresce insieme).</li>
+<li><b>🎤 Le tue frasi</b>: ciò che hai detto a voce appare nella chat
+con la traduzione sotto, per il tempo scelto nel menu ⚙ → <b>🎤 Le tue frasi
+nella chat</b> (20 s di default), poi resta nella scheda <b>🎤 Io</b>.</li>
+<li><b>📋 Copiare dalla chat</b>: tieni premuto il tasto sinistro sul testo,
+trascina e rilascia: viene copiato. Funziona con l'overlay sbloccato, o
+bloccato se nel menu ⚙ <b>🖱 Bloccato: i clic vanno al gioco</b> è
+disattivato.</li>
 <li><b>📊 Ratings</b> (scheda in alto in questa finestra, o menu ⚙): le IA provate con questa app, con velocità e qualità, e <b>🧪 Prova su questo PC</b>: scegli un'IA (con le opzioni che ha ora: livelli GPU, contesto…) e premi <b>▶ Prova</b>. Mostra la velocità, i problemi e se funziona bene sul tuo PC; con un'IA locale confronta anche scheda grafica e processore.</li>
 <li><b>Modalità continua con le cuffie</b>: con <b>🎧 Continua a leggere la chat in modalità continua</b> attivo, la voce della chat continua a leggere tra le tue frasi e tace mentre parli. Con gli altoparlanti disattivalo, così il microfono non sente mai la voce. In ogni modalità, un messaggio della chat interrotto perché hai iniziato a parlare viene riletto dopo.</li>
 <li><b>Modelli locali</b>: nella memoria della scheda grafica resta solo il modello in uso; il precedente esce quando cambi modello o passi a un'IA cloud. La voce può usare un altro modello locale rispetto alla chat (allora restano caricati entrambi). Tutto viene scaricato quando l'app si chiude, anche dopo un crash.</li>

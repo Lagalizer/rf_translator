@@ -318,6 +318,12 @@ DEFAULT_OVERLAY_STYLE = {
     # O que o overlay mostra: 'all', 'bar' (só a barra de cima) ou 'chat'
     # (só as mensagens, sem a barra).
     "view_mode": "all",
+    # O que disseste pela voz fica X s no chat aberto e depois só no
+    # separador '🎤 Eu' (0 = só lá).
+    "my_speech_secs": 20,
+    # Com o cadeado, os cliques no chat vão para o jogo. Desligado: o chat
+    # recebe o rato e dá para selecionar/copiar texto.
+    "locked_click_through": True,
 }
 
 
@@ -6221,6 +6227,8 @@ class VoiceWorker(QObject):
     finished = pyqtSignal()
     # Indicador no overlay: 'listen' (a ouvir), 'busy' (a traduzir), ''.
     voice_state = pyqtSignal(str)
+    # Frase enviada: (o que disseste, o que foi escrito no jogo).
+    spoken = pyqtSignal(str, str)
 
     # Início da frase que pede resposta por PM. O Google em pt-PT escreve
     # 'reply' muitas vezes como 'replay' / 'répli'.
@@ -6728,6 +6736,9 @@ class VoiceWorker(QObject):
         self.status.emit(f"[{lang_label(target)}] {text_out}")
         if self._type_in_game(text_out, reply_to=reply_to):
             self.status.emit(T("[✅ Sent]"))
+            # O overlay mostra a fala no chat uns segundos e guarda-a no
+            # separador '🎤 Eu'.
+            self.spoken.emit(text_src, text_out)
 
     def _translate_voice(self, text_src, target):
         """Corrige as palavras de jogo mal ouvidas e traduz. Para destinos
