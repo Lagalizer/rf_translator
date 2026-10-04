@@ -3580,10 +3580,116 @@ class SettingsDialog(QDialog):
                                "Start.")))
         v.addWidget(g)
 
+        # Atualizações: compara com o GitHub e troca só o código (~0,3 MB);
+        # Python, Ollama, modelos e definições ficam como estão.
+        g, f = owner._group("🔄 " + T("Updates"))
+        self._upd_changed = None        # ficheiros diferentes do GitHub
+        self._upd_silent = False
+        self._upd_sig = _UpdateSignals()
+        self._upd_sig.checked.connect(self._upd_checked)
+        self._upd_sig.applied.connect(self._upd_applied)
+        self._upd_sig.status.connect(lambda t: self.upd_lbl.setText(t))
+        self.upd_btn = QPushButton(T("🔄 Check for updates"))
+        self.upd_btn.clicked.connect(self._upd_click)
+        self.upd_lbl = owner._hint(T("Only the app's code is replaced (~0.3 "
+                                     "MB). Your settings, keys, models and "
+                                     "the app's Python stay as they are."))
+        f.addRow(self.upd_btn)
+        f.addRow(self.upd_lbl)
+        if core.update_is_dev_copy():
+            self.upd_btn.setEnabled(False)
+            self.upd_lbl.setText(T("This folder is a development copy "
+                                   "(git): update it with git."))
+        v.addWidget(g)
+
         v.addStretch(1)
         close = QPushButton(tr("btn_close"))
         close.clicked.connect(self.accept)
         v.addWidget(close, 0, Qt.AlignmentFlag.AlignRight)
+
+    # ---------- atualizações ----------
+    def check_updates(self, silent=False):
+        """Em fundo. silent=True (ao abrir a app): só avisa se houver."""
+        if core.update_is_dev_copy():
+            return
+        self._upd_silent = silent
+        if not silent:
+            self.upd_btn.setEnabled(False)
+            self.upd_lbl.setText(T("🔄 Checking…"))
+
+        def run():
+            try:
+                res = core.update_check()
+            except Exception as e:
+                res = e
+            self._upd_sig.checked.emit(res)
+        threading.Thread(target=run, daemon=True, name="UpdateCheck").start()
+
+    def _upd_click(self):
+        if self._upd_changed:
+            self._upd_apply()
+        else:
+            self.check_updates()
+
+    def _upd_checked(self, res):
+        if getattr(self, "_upd_busy", False):
+            return      # já a atualizar (ex.: a verificação do arranque)
+        self.upd_btn.setEnabled(True)
+        owner = self.parent()
+        if isinstance(res, Exception):
+            log().warning(f"Atualizações: falhou: {res}")
+            if not self._upd_silent:
+                self.upd_lbl.setText(T("⚠️ Could not check: {e}",
+                                       e=str(res)[:150]))
+            return
+        self._upd_changed = res
+        if res:
+            self.upd_lbl.setText(T("🆕 There is a new version ({n} files "
+                                   "changed).", n=len(res)))
+            self.upd_btn.setText(T("⬇️ Update now"))
+            if owner is not None and hasattr(owner, "btn_settings"):
+                owner.btn_settings.setText(T("⚙ App settings") + "  🆕")
+                owner.btn_settings.setToolTip(T(
+                    "There is a new version: open the settings and press "
+                    "Update now."))
+        elif not self._upd_silent:
+            self.upd_lbl.setText(T("✅ You have the latest version."))
+
+    def _upd_apply(self):
+        self._upd_busy = True
+        self.upd_btn.setEnabled(False)
+        changed = list(self._upd_changed or [])
+
+        def run():
+            try:
+                msg = core.update_apply(changed,
+                                        status=self._upd_sig.status.emit)
+                self._upd_sig.applied.emit(msg, True)
+            except Exception as e:
+                log().exception("Atualização falhou")
+                self._upd_sig.applied.emit(
+                    T("⚠️ The update failed: {e}", e=str(e)[:150]), False)
+        threading.Thread(target=run, daemon=True, name="Update").start()
+
+    def _upd_applied(self, msg, ok):
+        self.upd_lbl.setText(msg)
+        owner = self.parent()
+        if not ok:
+            self._upd_busy = False
+            self.upd_btn.setEnabled(True)
+            return
+        # Reinicia já com o código novo (o que está aberto é o antigo).
+        restart = getattr(owner, "on_restart", None)
+        if restart:
+            QTimer.singleShot(1500, restart)
+
+
+class _UpdateSignals(QObject):
+    """Da thread das atualizações para a janela (Qt só na thread
+    principal)."""
+    checked = pyqtSignal(object)        # [ficheiros] ou Exception
+    applied = pyqtSignal(str, bool)     # (mensagem, correu bem)
+    status = pyqtSignal(str)
 
 
 def _native_to_logical(x, y):
@@ -4067,6 +4173,12 @@ class ConfigWindow(QMainWindow):
             "language packs and audio devices"))
         self.btn_settings.clicked.connect(self._open_settings)
         bottom.addWidget(self.btn_settings, 0)
+        if not ConfigWindow._update_checked:
+            # 1x por arranque, em fundo: se houver versão nova o botão ⚙
+            # ganha um 🆕 (atualiza-se nas Definições).
+            ConfigWindow._update_checked = True
+            QTimer.singleShot(4000, lambda: self.settings_dlg.check_updates(
+                silent=True))
         self.start_btn = QPushButton(tr("btn_start"))
         self.start_btn.setObjectName("start")
         self.start_btn.clicked.connect(self._start)
@@ -4432,6 +4544,8 @@ class ConfigWindow(QMainWindow):
         dlg.activateWindow()
 
     _quitting = False
+    _update_checked = False     # verificação de atualizações já feita
+    on_restart = None           # a app: fecha e abre outra vez (update)
 
     def closeEvent(self, event):
         # ✕ da janela principal: a app decide (fechar ou ficar na bandeja).
@@ -5027,6 +5141,7 @@ class RFTranslatorApp:
             on_log=self._open_log_from_app)
         self.cfg_window.set_on_style_changed(self._on_style_changed)
         self.cfg_window.on_close = self._on_main_closed
+        self.cfg_window.on_restart = self._restart_after_update
         self.cfg_window.tts = self.tts
         # Antes de mostrar: o botão da barra de tarefas nasce já com o ícone.
         _set_class_icon(int(self.cfg_window.winId()))
@@ -5576,6 +5691,16 @@ class RFTranslatorApp:
                 unload_all_ollama_models()      # o que estiver na VRAM
         except Exception:
             log().exception("Falha a descarregar modelo Ollama")
+
+    def _restart_after_update(self):
+        """Depois de atualizar: fecha (limpo, como o ✕) e uma vigia abre a
+        app outra vez quando esta acabar — já com o código novo."""
+        log().info("Atualização: a reiniciar a app")
+        try:
+            core.restart_app_after_exit()
+        except Exception:
+            log().exception("Não consegui agendar o reinício")
+        self.quit()
 
     def quit(self):
         log().info("A fechar app.")

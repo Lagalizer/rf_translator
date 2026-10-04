@@ -7374,3 +7374,131 @@ class ProfileManager:
         except Exception:
             log().exception("Erro a apagar profile")
         return False
+
+
+# ==================================================================
+# ATUALIZAÇÕES (GitHub)
+# ==================================================================
+# A app vem do zip do GitHub: só código (~0,3 MB). O Python da app, o
+# Ollama, modelos e pacotes de línguas ficam como estão. Compara-se o SHA
+# git de cada ficheiro com a árvore do GitHub (1 pedido, sem descarregar)
+# e, para atualizar, descarrega-se o zip e trocam-se só os que mudaram.
+UPDATE_REPO = "Lagalizer/rf_translator"
+UPDATE_BRANCH = "master"
+
+
+def update_is_dev_copy():
+    """Pasta com .git (a de quem desenvolve): não se atualiza por aqui —
+    apagava alterações ainda não enviadas para o GitHub."""
+    return os.path.isdir(os.path.join(_app_dir(), ".git"))
+
+
+def _git_blob_sha(path):
+    import hashlib
+    with open(path, "rb") as f:
+        data = f.read()
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+
+
+def update_check(timeout=15):
+    """Ficheiros da app diferentes do GitHub → [caminhos]. Erros de rede
+    sobem (RequestException)."""
+    r = requests.get(f"https://api.github.com/repos/{UPDATE_REPO}/git/"
+                     f"trees/{UPDATE_BRANCH}", params={"recursive": "1"},
+                     timeout=timeout,
+                     headers={"Accept": "application/vnd.github+json"})
+    r.raise_for_status()
+    changed = []
+    for e in r.json().get("tree", []):
+        if e.get("type") != "blob":
+            continue
+        local = os.path.join(_app_dir(), *e["path"].split("/"))
+        try:
+            same = os.path.isfile(local) and _git_blob_sha(local) == e["sha"]
+        except OSError:
+            same = False
+        if not same:
+            changed.append(e["path"])
+    log().info(f"Atualizações: {len(changed)} ficheiro(s) diferentes do "
+               f"GitHub: {changed[:20]}")
+    return changed
+
+
+def update_apply(changed, status=None):
+    """Descarrega o zip do GitHub e troca só os ficheiros 'changed'.
+    Depois recompila o .exe (se o launcher mudou) e instala pacotes novos
+    (se o requirements.txt mudou), sem janelas. → texto do resultado."""
+    import io
+    import subprocess
+    import zipfile
+    say = status or (lambda t: None)
+    if update_is_dev_copy():
+        raise RuntimeError(T("This folder is a development copy (git): "
+                             "update it with git."))
+    say(T("⬇️ Downloading the new version…"))
+    r = requests.get(f"https://codeload.github.com/{UPDATE_REPO}/zip/refs/"
+                     f"heads/{UPDATE_BRANCH}", timeout=60)
+    r.raise_for_status()
+    want, done = set(changed), []
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        for info in z.infolist():
+            if info.is_dir() or "/" not in info.filename:
+                continue
+            rel = info.filename.split("/", 1)[1]    # sem 'repo-master/'
+            if rel not in want:
+                continue
+            dest = os.path.join(_app_dir(), *rel.split("/"))
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            tmp = dest + ".update"
+            with open(tmp, "wb") as f:
+                f.write(z.read(info))
+            os.replace(tmp, dest)
+            done.append(rel)
+    log().info(f"Atualização: {len(done)} ficheiro(s) trocados: {done}")
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    if any(p.startswith("launcher/") for p in done) and os.name == "nt":
+        say(T("🔧 Rebuilding RF Translator.exe…"))
+        p = subprocess.run(["cmd", "/c", os.path.join(_app_dir(), "launcher",
+                                                      "build.bat")],
+                           capture_output=True, text=True,
+                           encoding="utf-8", errors="replace",
+                           creationflags=flags)
+        log().info(f"Atualização: build.bat → {p.returncode}")
+    if "requirements.txt" in done:
+        say(T("📦 Installing new packages…"))
+        env = None
+        try:
+            from bootstrap import pip_env
+            env = pip_env()
+        except Exception:
+            pass
+        p = subprocess.run([sys.executable, "-m", "pip", "install",
+                            "--no-cache-dir", "-r",
+                            os.path.join(_app_dir(), "requirements.txt")],
+                           capture_output=True, text=True, env=env,
+                           encoding="utf-8", errors="replace",
+                           creationflags=flags)
+        log().info(f"Atualização: pip → {p.returncode}")
+    return T("✅ Updated ({n} files). The app restarts now.", n=len(done))
+
+
+def restart_app_after_exit():
+    """Abre a app outra vez quando esta acabar de fechar (uma 2.ª cópia ao
+    mesmo tempo era recusada: 'a app já está aberta')."""
+    import subprocess
+    exe = sys.executable
+    pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
+    main = os.path.join(_app_dir(), "main.py")
+    src = ("import ctypes, subprocess, sys\n"
+           "k = ctypes.windll.kernel32\n"
+           "h = k.OpenProcess(0x00100000, False, int(sys.argv[1]))\n"
+           "if h:\n"
+           "    k.WaitForSingleObject(h, 60000)\n"
+           "subprocess.Popen([sys.argv[2], sys.argv[3]], cwd=sys.argv[4])\n")
+    subprocess.Popen([pyw if os.path.isfile(pyw) else exe, "-c", src,
+                      str(os.getpid()), pyw if os.path.isfile(pyw) else exe,
+                      main, _app_dir()],
+                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                     | getattr(subprocess, "DETACHED_PROCESS", 0),
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, close_fds=True)

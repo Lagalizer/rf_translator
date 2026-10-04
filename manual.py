@@ -167,6 +167,10 @@ window closes the app. You can change both in <b>⚙ App settings</b>.</li>
 <li><b>⚙ App settings</b> (button at the bottom of the main window):
 interface language, theme, overlay appearance, what ✕ does, language packs and audio devices
 (microphone with 🎤 Test, and the voice output).</li>
+<li><b>🔄 Updates</b> (in ⚙ App settings): when the app opens it checks
+GitHub; if there is a new version the ⚙ button shows 🆕. <b>⬇️ Update now</b>
+replaces only the app's code (~0.3 MB) and restarts it. Your settings, keys,
+models and the app's Python stay as they are.</li>
 <li><b>💾 Profiles</b> (box on the right of the main window): a profile
 saves everything inside that box (character name and alert, chat reading,
 microphone and hotkeys, reading voice) plus the overlay appearance and the
@@ -377,6 +381,10 @@ fecha a app. Podes mudar os dois em <b>⚙ Definições da app</b>.</li>
 <li><b>⚙ Definições da app</b> (botão no fundo da janela principal): língua
 da app, tema, aparência do overlay, o que faz o ✕, pacotes de idiomas e dispositivos de áudio
 (micro com 🎤 Testar e a saída da voz).</li>
+<li><b>🔄 Atualizações</b> (em ⚙ Definições da app): ao abrir, a app
+verifica o GitHub; se houver uma versão nova o botão ⚙ mostra 🆕. <b>⬇️ Atualizar
+agora</b> troca só o código da app (~0,3 MB) e reinicia-a. As tuas definições,
+chaves, modelos e o Python da app ficam como estão.</li>
 <li><b>💾 Perfis</b> (caixa à direita na janela principal): um perfil
 grava tudo o que está dentro dessa caixa (nome da personagem e alerta,
 leitura do chat, microfone e teclas, voz que lê) mais a aparência do overlay
@@ -591,6 +599,10 @@ app</b>.</li>
 <li><b>⚙ Ajustes de la app</b> (botón abajo en la ventana principal): idioma
 de la app, tema, apariencia del overlay, qué hace ✕, paquetes de idiomas y dispositivos de audio
 (micrófono con 🎤 Probar y la salida de voz).</li>
+<li><b>🔄 Actualizaciones</b> (en ⚙ Ajustes de la app): al abrirse, la
+app comprueba GitHub; si hay una versión nueva el botón ⚙ muestra 🆕.
+<b>⬇️ Actualizar ahora</b> cambia solo el código de la app (~0,3 MB) y la
+reinicia. Tus ajustes, claves, modelos y el Python de la app se quedan igual.</li>
 <li><b>💾 Perfiles</b> (recuadro a la derecha de la ventana principal):
 un perfil guarda todo lo que hay en ese recuadro (nombre del personaje y
 aviso, lectura del chat, micrófono y teclas, voz lectora) más la apariencia
@@ -811,6 +823,10 @@ l'app</b>.</li>
 <li><b>⚙ Paramètres de l'app</b> (bouton en bas de la fenêtre principale) :
 langue de l'app, thème, apparence de l'overlay, action de ✕, packs de langues et périphériques audio
 (micro avec 🎤 Tester et la sortie de la voix).</li>
+<li><b>🔄 Mises à jour</b> (dans ⚙ Paramètres de l'app) : à l'ouverture,
+l'app vérifie GitHub ; s'il y a une nouvelle version, le bouton ⚙ affiche 🆕.
+<b>⬇️ Mettre à jour</b> remplace seulement le code de l'app (~0,3 Mo) et la
+redémarre. Tes réglages, clés, modèles et le Python de l'app ne changent pas.</li>
 <li><b>💾 Profils</b> (cadre à droite de la fenêtre principale) : un
 profil enregistre tout ce qui est dans ce cadre (nom du personnage et alerte,
 lecture du chat, micro et touches, voix de lecture) plus l'apparence de
@@ -1030,6 +1046,10 @@ beendet die App. Beides lässt sich in <b>⚙ App-Einstellungen</b> ändern.</li
 <li><b>⚙ App-Einstellungen</b> (Knopf unten im Hauptfenster): App-Sprache,
 Design, Overlay-Aussehen, was ✕ tut, Sprachpakete und Audiogeräte (Mikrofon mit 🎤 Testen und
 die Sprachausgabe).</li>
+<li><b>🔄 Updates</b> (in ⚙ App-Einstellungen): Beim Öffnen prüft die
+App GitHub; gibt es eine neue Version, zeigt der ⚙-Knopf 🆕. <b>⬇️ Jetzt
+aktualisieren</b> ersetzt nur den Code der App (~0,3 MB) und startet sie neu.
+Deine Einstellungen, Schlüssel, Modelle und das Python der App bleiben.</li>
 <li><b>💾 Profile</b> (Rahmen rechts im Hauptfenster): ein Profil
 speichert alles in diesem Rahmen (Charaktername und Hinweis, Chat lesen,
 Mikrofon und Tasten, Vorlesestimme) sowie das Overlay-Aussehen und die
@@ -1243,6 +1263,11 @@ Alt+Tab оверлей прячется, но чтение и озвучка п�
 <li><b>⚙ Настройки приложения</b> (кнопка внизу главного окна): язык
 приложения, тема, вид оверлея, действие ✕, языковые пакеты и аудиоустройства (микрофон
 с 🎤 Тест и вывод голоса).</li>
+<li><b>🔄 Обновления</b> (в ⚙ Настройки приложения): при запуске
+приложение проверяет GitHub; если есть новая версия, на кнопке ⚙ появляется 🆕.
+<b>⬇️ Обновить сейчас</b> заменяет только код приложения (~0,3 МБ) и
+перезапускает его. Ваши настройки, ключи, модели и Python приложения не
+меняются.</li>
 <li><b>💾 Профили</b> (рамка справа в главном окне): профиль сохраняет
 всё, что внутри этой рамки (имя персонажа и оповещение, чтение чата,
 микрофон и клавиши, голос чтения), а также вид оверлея и аудиоустройства.
@@ -1456,6 +1481,11 @@ dell'app</b>.</li>
 <li><b>⚙ Impostazioni dell'app</b> (pulsante in basso nella finestra
 principale): lingua dell'app, tema, aspetto dell'overlay, cosa fa ✕, pacchetti lingua e
 dispositivi audio (microfono con 🎤 Prova e l'uscita della voce).</li>
+<li><b>🔄 Aggiornamenti</b> (in ⚙ Impostazioni dell'app): all'apertura
+l'app controlla GitHub; se c'è una nuova versione il pulsante ⚙ mostra 🆕.
+<b>⬇️ Aggiorna ora</b> sostituisce solo il codice dell'app (~0,3 MB) e la
+riavvia. Le tue impostazioni, chiavi, modelli e il Python dell'app restano
+come sono.</li>
 <li><b>💾 Profili</b> (riquadro a destra nella finestra principale): un
 profilo salva tutto ciò che c'è in quel riquadro (nome del personaggio e
 avviso, lettura della chat, microfono e tasti, voce di lettura) più l'aspetto
