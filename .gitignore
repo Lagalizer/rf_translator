@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Large downloaded assets
+python/
+python.setup/
+python.setup.zip
+python.setup.tmp/
+models/
+ollama/
+tessdata/
+argos/
+
+# Runtime state / user data (may contain API keys)
+last_config.json
+overlay_state.json
+ui_prefs.json
+profiles/
+logs/
+ui_cache/
+
+# Build output & local backups
+*.exe
+backup_*/
+model_profiles.json
+nllb/
+# Dev-only files (kept locally, not on GitHub)
+CLAUDE.md
+DOCUMENTATION.md
+tests_*.py
+tools/
+install.sh
+run.sh
