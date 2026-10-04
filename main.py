@@ -2770,6 +2770,10 @@ class AIPanel(QGroupBox):
 
     # ---------- IA ----------
     def _on_prov_changed(self, *_):
+        if not self.model_cb.isEnabled():
+            # A lista só tinha o aviso do Local ('⚠️ No model installed'):
+            # não pode passar para a nuvem como nome de modelo.
+            self.model_cb.clear()
         prov = self.provider()
         self._prov = prov if self.is_cloud() else None
         if self._prov:
