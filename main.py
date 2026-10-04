@@ -2749,6 +2749,11 @@ class AIPanel(QGroupBox):
         return not (self.is_same() or self.is_local() or self.is_mt())
 
     def model(self):
+        # Local sem modelos / Ollama desligado: a lista só tem o aviso
+        # ('⚠️ No model installed') e fica desativada. O texto do aviso ia
+        # para o Ollama como nome do modelo → '400 invalid model name'.
+        if self.is_local() and not self.model_cb.isEnabled():
+            return ""
         return core.model_id(self.model_cb.currentText()).strip()
 
     def _url(self):

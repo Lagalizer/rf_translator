@@ -4475,6 +4475,10 @@ class AIEngine:
             # A API quer número para '-1' (nunca) e '0'; texto p/ '5m'.
             payload["keep_alive"] = int(ka) if re.fullmatch(r"-?\d+", ka) \
                 else ka
+        if not (self.cfg.model or "").strip():
+            # O Ollama respondia só '400 Bad Request' ('model is required').
+            raise ValueError(T("No local (Ollama) model chosen — pick one "
+                               "in the AI panel (🤗 downloads one)."))
         log().debug(f"OLLAMA → model={self.cfg.model} "
                     f"text_len={len(text)}")
         t0 = time.time()
@@ -4493,7 +4497,18 @@ class AIEngine:
             payload.pop("think", None)
             r = requests.post(f"{OLLAMA_URL}/api/chat", json=payload,
                               timeout=180)
-        r.raise_for_status()
+        if r.status_code >= 400:
+            # O motivo vem no corpo ({'error': ...}); o raise_for_status só
+            # dizia '400 Client Error: Bad Request'.
+            try:
+                why = r.json().get("error") or r.text
+            except ValueError:
+                why = r.text
+            log().warning(f"OLLAMA {r.status_code} ({self.cfg.model}): "
+                          f"{why[:300]}")
+            raise requests.exceptions.HTTPError(
+                f"Ollama {r.status_code} ({self.cfg.model}): {why[:200]}",
+                response=r)
         dt = time.time() - t0
         out = ((r.json().get("message") or {}).get("content") or "").strip()
         log().debug(f"OLLAMA ← {dt:.2f}s, {len(out)} chars")
