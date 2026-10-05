@@ -103,8 +103,14 @@ from PyQt6.QtGui import QFont, QTextCursor, QAction, QColor, QCursor, QIcon
 from bootstrap import (
     bootstrap, kill_ollama_tray, start_ollama_server,
     find_ollama_exe, is_ollama_running, list_ollama_installed_models,
+    stop_app_ollama, kill_orphan_app_ollama, _ollama_app_dir,
 )
 # '--quit' só manda fechar a app aberta: sem instalações nem verificações.
+if "--quit" not in sys.argv:
+    # Um Ollama da pasta da app que ficou a correr (sessão que acabou mal,
+    # versão antiga): fecha-o ANTES de o bootstrap arrancar o novo.
+    try: kill_orphan_app_ollama()
+    except Exception: pass
 _TESS_OK, _TESS_INFO = (True, "") if "--quit" in sys.argv else bootstrap()
 
 # ---------- CORE ----------
@@ -5892,6 +5898,11 @@ class RFTranslatorApp:
         self._stop_workers()
         self.tts.stop()
         self._unload_ollama()
+        try:
+            n = stop_app_ollama()           # fecha o Ollama que a app abriu
+            log().info(f"Ollama da app fechado: {n} processo(s)")
+        except Exception:
+            log().exception("Falha a fechar o Ollama da app")
         if self._tray_icon:
             try: self._tray_icon.hide()
             except Exception: pass
@@ -5927,13 +5938,65 @@ def _install_excepthooks():
 
 
 _WATCHDOG_SRC = r'''
-import ctypes, json, sys, time, urllib.request
+import ctypes, json, os, sys, time, urllib.request
+from ctypes import wintypes
 pid, url, log_path = int(sys.argv[1]), sys.argv[2], sys.argv[3]
-k = ctypes.windll.kernel32
+ollama_dir = sys.argv[4] if len(sys.argv) > 4 else ""
+k = ctypes.WinDLL("kernel32", use_last_error=True)
+k.OpenProcess.restype = wintypes.HANDLE
+k.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+k.CloseHandle.argtypes = [wintypes.HANDLE]
+k.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+k.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD,
+    wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+k.OpenMutexW.restype = wintypes.HANDLE
+k.OpenMutexW.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+k.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+k.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+class E(ctypes.Structure):
+    _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+                ("pid", wintypes.DWORD), ("heap", ctypes.c_size_t),
+                ("mod", wintypes.DWORD), ("thr", wintypes.DWORD),
+                ("ppid", wintypes.DWORD), ("pri", wintypes.LONG),
+                ("flags", wintypes.DWORD), ("exe", wintypes.WCHAR * 260)]
+k.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(E)]
+k.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(E)]
 h = k.OpenProcess(0x00100000, False, pid)          # SYNCHRONIZE
 if not h:
     sys.exit(0)
 k.WaitForSingleObject(h, 0xFFFFFFFF)               # espera a app terminar
+def sweep():
+    """Fecha o Ollama da app (processos cujo .exe esta em ollama\\ da app),
+    sem consola: so chamadas ao Windows. Se ja ha OUTRA copia da app viva
+    (reinicio apos atualizacao), o Ollama e dela e nao se toca."""
+    if not ollama_dir:
+        return 0
+    m = k.OpenMutexW(0x00100000, False, "RFOnlineTranslator.SingleInstance")
+    if m:
+        k.CloseHandle(m)
+        return 0
+    root = os.path.normcase(os.path.abspath(ollama_dir)) + os.sep
+    snap = k.CreateToolhelp32Snapshot(0x2, 0)
+    n = 0
+    e = E(); e.dwSize = ctypes.sizeof(E)
+    ok = k.Process32FirstW(snap, ctypes.byref(e))
+    while ok:
+        ph = k.OpenProcess(0x1001, False, e.pid)    # TERMINATE | QUERY_LIMITED
+        if ph:
+            buf = ctypes.create_unicode_buffer(1024)
+            sz = wintypes.DWORD(1024)
+            if (k.QueryFullProcessImageNameW(ph, 0, buf, ctypes.byref(sz))
+                    and os.path.normcase(buf.value).startswith(root)):
+                if k.TerminateProcess(ph, 1):
+                    n += 1
+            k.CloseHandle(ph)
+        ok = k.Process32NextW(snap, ctypes.byref(e))
+    k.CloseHandle(snap)
+    return n
+try:
+    closed = sweep()
+except Exception:
+    closed = 0
 def post(path, body=None):
     req = urllib.request.Request(url + path, data=json.dumps(body).encode()
                                  if body is not None else None,
@@ -5941,17 +6004,19 @@ def post(path, body=None):
     return json.loads(urllib.request.urlopen(req, timeout=15).read() or b"{}")
 gone = []
 try:
-    for m in post("/api/ps").get("models", []):
+    for m in post("/api/ps").get("models", []):     # so um Ollama de fora ainda responde
         name = m.get("name") or m.get("model")
         post("/api/generate", {"model": name, "keep_alive": 0})
         gone.append(name)
 except Exception as e:
-    gone.append(f"erro: {e}")
+    if not closed:
+        gone.append(f"erro: {e}")
 try:
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(time.strftime("%Y-%m-%d %H:%M:%S") + ".000 [INFO   ] "
-                "[Vigia       ] [watchdog] App terminou (pid %d) — modelos "
-                "descarregados da VRAM: %s\n" % (pid, gone or "nenhum"))
+                "[Vigia       ] [watchdog] App terminou (pid %d) — Ollama da "
+                "app fechado: %d processo(s); modelos descarregados da VRAM "
+                "(Ollama de fora): %s\n" % (pid, closed, gone or "nenhum"))
 except Exception:
     pass
 '''
@@ -6022,7 +6087,8 @@ def _start_unload_watchdog():
         pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
         subprocess.Popen(
             [pyw if os.path.isfile(pyw) else exe, "-c", _WATCHDOG_SRC,
-             str(os.getpid()), core.OLLAMA_URL, get_log_path()],
+             str(os.getpid()), core.OLLAMA_URL, get_log_path(),
+             _ollama_app_dir()],
             creationflags=(subprocess.CREATE_NO_WINDOW
                            | subprocess.DETACHED_PROCESS),
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,

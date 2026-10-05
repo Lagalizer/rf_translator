@@ -1083,6 +1083,205 @@ def find_ollama_exe():
     return None
 
 
+# ------------------------------------------------------------------
+# OLLAMA: fechar tudo o que a app abriu
+# ------------------------------------------------------------------
+# O servidor que ESTA app arranca é dela: tem de fechar com ela, também num
+# crash. Um Ollama que já estava aberto (o do utilizador) nunca é tocado.
+# Três redes: (1) Job Object do Windows com KILL_ON_JOB_CLOSE - o sistema
+# mata o servidor e os 'runners' quando a app acaba, seja como for;
+# (2) stop_app_ollama() no fecho normal; (3) o vigia (main.py) e o
+# kill_orphan_app_ollama() no arranque limpam o que ficou de versões antigas
+# (processos cujo .exe está na pasta ollama\ da app).
+_JOB = None
+_OWNED_PROCS = []          # os Popen do 'ollama serve' que a app arrancou
+_JOB_KILL_ON_CLOSE = 0x2000
+_SINGLE_INSTANCE_MUTEX = "RFOnlineTranslator.SingleInstance"
+
+
+def _kernel32():
+    import ctypes
+    from ctypes import wintypes
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.CreateJobObjectW.restype = wintypes.HANDLE
+    k.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    k.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int,
+                                          ctypes.c_void_p, wintypes.DWORD]
+    k.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    k.OpenProcess.restype = wintypes.HANDLE
+    k.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    k.CloseHandle.argtypes = [wintypes.HANDLE]
+    k.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    k.QueryFullProcessImageNameW.argtypes = [
+        wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
+        ctypes.POINTER(wintypes.DWORD)]
+    k.OpenMutexW.restype = wintypes.HANDLE
+    k.OpenMutexW.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+    return k
+
+
+def _kill_on_exit_job():
+    """Um Job Object só da app: tudo o que lá estiver morre quando a app
+    termina (o handle fecha com o processo, mesmo num crash)."""
+    global _JOB
+    if _JOB or os.name != "nt":
+        return _JOB
+    import ctypes
+    from ctypes import wintypes
+
+    class _Basic(ctypes.Structure):
+        _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64),
+                    ("PerJobUserTimeLimit", ctypes.c_int64),
+                    ("LimitFlags", wintypes.DWORD),
+                    ("MinimumWorkingSetSize", ctypes.c_size_t),
+                    ("MaximumWorkingSetSize", ctypes.c_size_t),
+                    ("ActiveProcessLimit", wintypes.DWORD),
+                    ("Affinity", ctypes.c_size_t),
+                    ("PriorityClass", wintypes.DWORD),
+                    ("SchedulingClass", wintypes.DWORD)]
+
+    class _Io(ctypes.Structure):
+        _fields_ = [(n, ctypes.c_uint64) for n in (
+            "ReadOperationCount", "WriteOperationCount",
+            "OtherOperationCount", "ReadTransferCount",
+            "WriteTransferCount", "OtherTransferCount")]
+
+    class _Ext(ctypes.Structure):
+        _fields_ = [("Basic", _Basic), ("Io", _Io),
+                    ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t),
+                    ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t)]
+
+    try:
+        k = _kernel32()
+        job = k.CreateJobObjectW(None, None)
+        if not job:
+            return None
+        info = _Ext()
+        info.Basic.LimitFlags = _JOB_KILL_ON_CLOSE
+        if not k.SetInformationJobObject(job, 9, ctypes.byref(info),
+                                         ctypes.sizeof(info)):
+            return None
+        _JOB = job
+    except Exception:
+        return None
+    return _JOB
+
+
+def _own_ollama(proc):
+    """Regista o 'ollama serve' que a app arrancou e põe-no no Job Object."""
+    _OWNED_PROCS.append(proc)
+    if os.name != "nt":
+        return
+    try:
+        job = _kill_on_exit_job()
+        if job:
+            _kernel32().AssignProcessToJobObject(job, int(proc._handle))
+    except Exception:
+        pass
+
+
+def _app_ollama_pids():
+    """PIDs dos processos cujo .exe está na pasta ollama\\ da app (servidor
+    e 'runners' dos modelos). Só o Ollama da app, nunca o do sistema."""
+    if os.name != "nt":
+        return []
+    import ctypes
+    from ctypes import wintypes
+    root = os.path.normcase(os.path.abspath(_ollama_app_dir())) + os.sep
+    k = _kernel32()
+
+    class _Entry(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", wintypes.WCHAR * 260)]
+
+    k.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    k.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(_Entry)]
+    k.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(_Entry)]
+    snap = k.CreateToolhelp32Snapshot(0x2, 0)          # TH32CS_SNAPPROCESS
+    if not snap or snap == wintypes.HANDLE(-1).value:
+        return []
+    pids = []
+    try:
+        e = _Entry()
+        e.dwSize = ctypes.sizeof(_Entry)
+        ok = k.Process32FirstW(snap, ctypes.byref(e))
+        while ok:
+            h = k.OpenProcess(0x1000, False, e.th32ProcessID)  # QUERY_LIMITED
+            if h:
+                try:
+                    buf = ctypes.create_unicode_buffer(1024)
+                    n = wintypes.DWORD(1024)
+                    if k.QueryFullProcessImageNameW(h, 0, buf,
+                                                    ctypes.byref(n)):
+                        if os.path.normcase(buf.value).startswith(root):
+                            pids.append(int(e.th32ProcessID))
+                finally:
+                    k.CloseHandle(h)
+            ok = k.Process32NextW(snap, ctypes.byref(e))
+    finally:
+        k.CloseHandle(snap)
+    return pids
+
+
+def _kill_pid_tree(pid):
+    try:
+        _run_hidden(["taskkill", "/PID", str(pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    timeout=10)
+    except Exception:
+        pass
+
+
+def stop_app_ollama() -> int:
+    """Fecha o Ollama da app: o servidor que ela arrancou (também se for o
+    do sistema) e qualquer processo da pasta ollama\\ da app. Devolve
+    quantos fechou. Não toca num Ollama que já estava aberto antes."""
+    pids = set(_app_ollama_pids())
+    for proc in _OWNED_PROCS:
+        try:
+            if proc.poll() is None:            # poll: o PID pode ter sido reutilizado
+                pids.add(proc.pid)
+        except Exception:
+            pass
+    _OWNED_PROCS.clear()
+    for pid in pids:
+        _kill_pid_tree(pid)
+    return len(pids)
+
+
+def kill_orphan_app_ollama() -> int:
+    """No arranque: se NÃO há outra cópia da app aberta, qualquer Ollama da
+    pasta da app que esteja a correr ficou de uma sessão que acabou mal
+    (ou de uma versão antiga sem esta limpeza). Fecha-o."""
+    if os.name != "nt":
+        return 0
+    try:
+        k = _kernel32()
+        h = k.OpenMutexW(0x00100000, False, _SINGLE_INSTANCE_MUTEX)  # SYNCHRONIZE
+        if h:                                   # outra cópia está viva: não tocar
+            k.CloseHandle(h)
+            return 0
+    except Exception:
+        return 0
+    try:
+        pids = _app_ollama_pids()
+    except Exception:
+        return 0
+    for pid in pids:
+        _kill_pid_tree(pid)
+    return len(pids)
+
+
 def start_ollama_server(ollama_exe, extra_env=None):
     if is_ollama_running():
         kill_ollama_tray()
@@ -1110,13 +1309,14 @@ def start_ollama_server(ollama_exe, extra_env=None):
                          subprocess.CREATE_NEW_PROCESS_GROUP)
     try:
         si = _win_startupinfo()
-        _popen_hidden([ollama_exe, "serve"],
-                      stdout=subprocess.DEVNULL,
-                      stderr=subprocess.DEVNULL,
-                      stdin=subprocess.DEVNULL,
-                      creationflags=creationflags,
-                      startupinfo=si,
-                      env=env, close_fds=True)
+        proc = _popen_hidden([ollama_exe, "serve"],
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL,
+                             stdin=subprocess.DEVNULL,
+                             creationflags=creationflags,
+                             startupinfo=si,
+                             env=env, close_fds=True)
+        _own_ollama(proc)       # morre com a app: fechada, crash ou morta
     except Exception as e:
         print(_T("[Setup] Error starting ollama serve: {e}", e=e))
         return False
